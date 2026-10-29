@@ -1,5 +1,10 @@
 # SPEC · Security Scanner CLI (`sec-scan`)
 
+> **Status: v1 — frozen (2026-10-29).** This document is the frozen v1
+> specification. Implemented behavior is authoritative where it diverges; the
+> known deltas are listed in [§8 Implementation deltas](#8-implementation-deltas-vs-this-spec).
+> Full usage documentation lives in [`docs/`](docs/README.md).
+
 ## 1. Purpose
 
 A **defensive, command-line security-audit tool** that an engineer runs against
@@ -89,3 +94,25 @@ container image); the CLI never reimplements vulnerability logic.
 - SBOM (CycloneDX / SPDX via Syft).
 - CI exit codes keyed to a severity threshold.
 - A run manifest recording tool versions, scope, and timestamps.
+
+## 8. Implementation deltas vs this spec
+
+The v1 implementation follows this spec with the following documented deltas:
+
+- **No standalone `validate` command.** Triage (`validate`) and remediation
+  (`remediate`) are exposed through `audit` (end-to-end) and `fix` (apply
+  diffs), not as a separate `validate` subcommand. The §3 CLI surface listed
+  `validate`/`fix`; shipped commands are `scan, audit, fix, report, ci,
+  baseline, scope, login`.
+- **`login` is a placeholder.** It prints harness-configuration guidance and
+  stores no credentials; harness selection is via `--harness` or
+  `SEC_SCAN_HARNESS`.
+- **Added commands** beyond §3: `report` (re-render a findings file) and
+  `baseline` (generate a suppressions file).
+- **DAST tooling.** Active adapters are `nuclei` and `zap` (baseline, passive),
+  both gated by the authorization scope of §5, rate-limited and time-boxed.
+- **Configuration.** `.sec-scan.json` (categories, profile→threshold, harness,
+  baseline, per-tool rule filters) with precedence CLI > config > default.
+
+See [`docs/commandes.md`](docs/commandes.md) for the authoritative command
+reference and [`CHANGELOG.md`](CHANGELOG.md) for release history.
