@@ -45,5 +45,10 @@ COPY --from=build /app/dist ./dist
 COPY package.json ./
 COPY scripts ./scripts
 
+# Run as an unprivileged user (no capabilities needed for scanning).
+RUN useradd --system --uid 10001 --create-home --home-dir /home/scan scan \
+    && chown -R scan:scan /app
+USER scan
+
 ENTRYPOINT ["node", "dist/cli/src/index.js"]
 CMD ["--help"]
