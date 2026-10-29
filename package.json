@@ -1,5 +1,5 @@
 {
-  "name": "sec-scan",
+  "name": "@ldb2000/sec-scan",
   "version": "0.1.0",
   "description": "Defensive security-audit CLI that runs as an agent harness under Claude Code or Codex. Identify -> validate -> remediate.",
   "license": "Apache-2.0",
@@ -7,15 +7,39 @@
   "bin": {
     "sec-scan": "dist/cli/src/index.js"
   },
+  "files": [
+    "dist",
+    "scripts/install-tools.sh",
+    "scripts/verify-tools.sh",
+    "README.md",
+    "SECURITY.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    ".sec-scan.example.json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ldb2000/securityscanner.git"
+  },
+  "homepage": "https://github.com/ldb2000/securityscanner#readme",
+  "bugs": {
+    "url": "https://github.com/ldb2000/securityscanner/issues"
+  },
+  "keywords": ["security", "sast", "sca", "sbom", "dast", "sarif", "cli", "devsecops"],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -b",
     "dev": "node --loader ts-node/esm cli/src/index.ts",
     "start": "node dist/cli/src/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "bundle": "node scripts/bundle.mjs",
     "pretest": "npm run build",
     "test": "SEC_SCAN_AUDIT_LOG=/tmp/sec-scan-test-audit.log node --test tests/",
     "pretest:coverage": "npm run build",
-    "test:coverage": "SEC_SCAN_AUDIT_LOG=/tmp/sec-scan-test-audit.log c8 --check-coverage --src=dist --lines 55 --functions 50 --branches 65 --statements 55 --reporter=text-summary node --test tests/"
+    "test:coverage": "SEC_SCAN_AUDIT_LOG=/tmp/sec-scan-test-audit.log c8 --check-coverage --src=dist --lines 55 --functions 50 --branches 65 --statements 55 --reporter=text-summary node --test tests/",
+    "prepublishOnly": "npm run build"
   },
   "engines": {
     "node": ">=20"
@@ -26,6 +50,7 @@
   "devDependencies": {
     "@types/node": "20.14.9",
     "c8": "^10.1.3",
+    "esbuild": "0.23.1",
     "typescript": "5.5.4"
   }
 }

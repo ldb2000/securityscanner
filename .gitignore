@@ -5,3 +5,4 @@ coverage/
 findings.json
 .sec-scan-audit.log
 *.cdx.json
+*.tgz

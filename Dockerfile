@@ -22,22 +22,33 @@ ARG TRIVY_VERSION=0.55.0
 ARG GRYPE_VERSION=0.79.6
 ARG SYFT_VERSION=1.11.1
 ARG GITLEAKS_VERSION=8.18.4
+ARG SEMGREP_VERSION=1.90.0
+ARG CHECKOV_VERSION=3.2.257
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates curl git python3 python3-pip tar \
     && rm -rf /var/lib/apt/lists/*
 
-# Semgrep + Checkov (Python)
-RUN pip3 install --no-cache-dir --break-system-packages semgrep checkov
+# Semgrep + Checkov (Python), pinned
+RUN pip3 install --no-cache-dir --break-system-packages \
+      "semgrep==${SEMGREP_VERSION}" "checkov==${CHECKOV_VERSION}"
 
-# Trivy, Grype, Syft (official installers, pinned)
+# Trivy, Grype, Syft (official installers verify their own checksums, pinned)
 RUN curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v${TRIVY_VERSION} \
     && curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin v${GRYPE_VERSION} \
     && curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh  | sh -s -- -b /usr/local/bin v${SYFT_VERSION}
 
-# Gitleaks (pinned release tarball)
-RUN curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
-      | tar -xz -C /usr/local/bin gitleaks
+# Gitleaks (pinned release tarball), integrity verified against the release checksums.txt
+RUN cd /tmp \
+    && curl -sSfL -O "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+    && curl -sSfL -O "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_checksums.txt" \
+    && grep "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" "gitleaks_${GITLEAKS_VERSION}_checksums.txt" | sha256sum -c - \
+    && tar -xz -C /usr/local/bin -f "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" gitleaks \
+    && rm -f gitleaks_${GITLEAKS_VERSION}_*
+
+# Confirm the installed binaries match the pinned versions.
+COPY scripts/verify-tools.sh /usr/local/bin/verify-tools.sh
+RUN chmod +x /usr/local/bin/verify-tools.sh && /usr/local/bin/verify-tools.sh
 
 WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
