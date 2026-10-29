@@ -1,0 +1,33 @@
+{
+  "todos": [
+    {"text": "Créer docs/README.md : sommaire de la documentation et liens vers chaque page, référencé depuis le README racine", "why": "Point d'entrée unique ; le README actuel reste un aperçu court"},
+    {"text": "docs/installation.md : npx, image conteneur, build depuis les sources, bundle sec-scan.cjs, scripts/install-tools.sh et verify-tools.sh, Node >= 20", "why": "Couvre les 4 modes d'installation livrés par SS-7"},
+    {"text": "docs/demarrage-rapide.md : premier scan statique, lecture du rapport md, passage à audit puis fix (diffs sans application)", "why": "Guide pas à pas pour un nouvel utilisateur, flux identify → validate → remediate"},
+    {"text": "docs/commandes.md : référence de chaque commande (scan, audit, fix, report, ci, baseline, scope, login) avec toutes ses options, valeurs par défaut et un exemple, alignée sur cli/src/index.ts", "why": "La CLI est la surface publique ; la doc doit refléter le code réel"},
+    {"text": "Signaler dans docs/commandes.md les écarts avec SPEC.md §3 (pas de commande validate autonome, login est un placeholder)", "why": "Évite qu'un utilisateur cherche des commandes absentes"},
+    {"text": "docs/configuration.md : champs de .sec-scan.json (categories, profile, harness, baseline, rules enable/disable), profils → seuil ci, précédence flag > fichier > défaut, erreur exit 2", "why": "Rend les exécutions reproductibles sans flags (SS-6)"},
+    {"text": "Tableau des variables d'environnement : SEC_SCAN_HARNESS, SEC_SCAN_CLAUDE_CMD, SEC_SCAN_CODEX_CMD, SEC_SCAN_BIN_DIR, SEC_SCAN_AUDIT_LOG, SEC_SCAN_DAST_RATE_LIMIT, SEC_SCAN_DAST_TIMEOUT_MS, SEC_SCAN_FINDINGS_DATA", "why": "Ces variables ne sont documentées nulle part de façon complète"},
+    {"text": "docs/harness.md : choisir claude-code, codex ou none, prérequis sur le PATH, findings traités comme données, lecture seule sauf fix --apply --yes", "why": "Contrat agent SPEC §6, essentiel pour l'usage sous Claude Code/Codex"},
+    {"text": "docs/baseline.md : générer, utiliser et faire expirer des suppressions, stabilité des empreintes", "why": "Workflow fréquent en CI pour accepter des risques connus"},
+    {"text": "docs/dast-et-autorisation.md : format scope.json, rejet hors périmètre, limites de débit/durée, journal d'audit, rappel d'usage autorisé uniquement", "why": "Exigence dure SPEC §5 ; doit être expliquée sans contenu offensif"},
+    {"text": "docs/ci.md : exemple GitHub Actions avec sec-scan ci --fail-on, codes de sortie (0, 1 au-dessus du seuil, 2 erreur d'usage), upload SARIF", "why": "Cas d'usage principal en intégration continue"},
+    {"text": "docs/sorties.md : formats sarif/json/md, SBOM CycloneDX, manifeste d'exécution, exemple de rapport", "why": "Explique ce que produit l'outil et comment l'exploiter"},
+    {"text": "docs/guidelines.md : guideline globale (bonnes pratiques d'usage, périmètre autorisé, revue humaine des diffs, gestion des secrets trouvés, conventions de contribution)", "why": "Répond au « guideline global » de la carte"},
+    {"text": "Vérifier chaque exemple de commande des docs contre le build (npm run build puis --help de chaque commande) et corriger les écarts", "why": "Une doc fausse est pire qu'absente"},
+    {"text": "Ajouter docs/ au champ files de package.json et une entrée dans CHANGELOG.md", "why": "La doc est livrée avec le paquet npm et tracée dans les versions"}
+  ],
+  "size": "M",
+  "complexity": 3,
+  "questions": [
+    "Dans quelle langue écrire la documentation : français (comme la carte) ou anglais (comme le README, SPEC et SECURITY actuels) ?",
+    "« Guideline global » désigne-t-il des règles d'usage pour les utilisateurs de l'outil, un guide de contribution pour les développeurs (CONTRIBUTING.md), ou les deux ?",
+    "Faut-il une documentation multi-pages dans docs/, ou un README racine enrichi suffit-il ?"
+  ],
+  "criteria": [
+    "Chaque commande et option de cli/src/index.ts est documentée avec un exemple",
+    "Toutes les variables SEC_SCAN_* du code figurent dans la doc",
+    "Les exemples de commandes s'exécutent tels quels sur le build",
+    "La page DAST rappelle l'obligation d'autorisation et ne contient aucun contenu offensif",
+    "Le README racine renvoie vers docs/"
+  ]
+}

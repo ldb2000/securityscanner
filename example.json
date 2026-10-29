@@ -1,0 +1,21 @@
+{
+  "todos": [
+    {
+      "text": "Paginated query of an agency's contracts, filtered by date and status",
+      "why": "Reuses the agency_id index"
+    },
+    {
+      "text": "GET /agencies/{id}/contracts.csv, for the agency manager only",
+      "why": "Permissions are checked in the API"
+    },
+    {
+      "text": "Tests: filters, permissions, UTF-8 encoding for Excel",
+      "why": "From the acceptance criteria"
+    }
+  ],
+  "size": "M",
+  "complexity": 3,
+  "questions": [
+    "Should exports above 10,000 contracts be sent by email instead?"
+  ]
+}

@@ -79,7 +79,10 @@ export async function identify(opts: IdentifyOptions): Promise<ScanResult[]> {
         targets: opts.scope.targets,
       });
     }
-    results.push(await scanner.scan(opts.target));
+    const t0 = Date.now();
+    const result = await scanner.scan(opts.target);
+    result.durationMs = Date.now() - t0;
+    results.push(result);
   }
   return results;
 }
