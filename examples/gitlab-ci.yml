@@ -1,0 +1,12 @@
+# Example: sec-scan in GitLab CI. Fails the job above the threshold and exposes
+# the SARIF as an artifact (GitLab reads SAST reports from artifacts:reports:sast).
+sec_scan:
+  image: ghcr.io/ldb2000/securityscanner:latest
+  script:
+    - sec-scan scan . --only sast,sca,secrets --format sarif --out gl-sast.sarif || true
+    - sec-scan ci . --only sast,sca,secrets --fail-on high
+  artifacts:
+    when: always
+    paths: [gl-sast.sarif]
+    reports:
+      sast: gl-sast.sarif
