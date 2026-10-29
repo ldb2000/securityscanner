@@ -75,7 +75,8 @@ export async function identify(opts: IdentifyOptions): Promise<ScanResult[]> {
         target: opts.target,
         detail: `${scanner.tool}/${scanner.category}`,
         authorizedBy: opts.scope.authorizedBy,
-        scopeRef: opts.scope.authorizedAt,
+        authorizedAt: opts.scope.authorizedAt,
+        targets: opts.scope.targets,
       });
     }
     results.push(await scanner.scan(opts.target));

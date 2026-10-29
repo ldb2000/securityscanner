@@ -9,6 +9,7 @@ import type { Scanner } from "../../../core/src/engine.js";
 import { fingerprint } from "../../../core/src/engine.js";
 import type { Finding, ScanResult, Severity } from "../../../core/src/types.js";
 import { detect, run } from "../exec.js";
+import { activeLimits } from "../limits.js";
 
 // ZAP riskcode: 3=High, 2=Medium, 1=Low, 0=Informational.
 function mapRisk(code: string): Severity {
@@ -52,7 +53,9 @@ export const zap: Scanner = {
     }
     const out = join(tmpdir(), `sec-scan-zap-${process.pid}-${Date.now()}.json`);
     // -J writes a JSON report; baseline is passive (no active attack) by default.
-    await run(resolved.bin, [...resolved.baseArgs, "-t", target, "-J", out]);
+    // Time-boxed via a hard wall-clock limit for authorized, scoped engagements.
+    const { timeoutMs } = activeLimits();
+    await run(resolved.bin, [...resolved.baseArgs, "-t", target, "-J", out], { timeoutMs });
     const findings: Finding[] = [];
     try {
       const report = JSON.parse(readFileSync(out, "utf8")) as {

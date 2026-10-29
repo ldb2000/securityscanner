@@ -22,6 +22,17 @@ are explicitly authorized to test**.
 This project does not ship exploits, payloads, credential harvesting, C2, or any
 offensive automation, and must not be used to test systems without authorization.
 
+## Least privilege & active-scan limits
+
+- Scanners are invoked with `execFile` (no shell), so finding/target data is
+  never interpreted by a shell.
+- The container image runs as a non-root user (`scan`, uid 10001).
+- Active (DAST) adapters are **rate-limited and time-boxed** (defaults: 50 req/s,
+  300s wall-clock), overridable for authorized engagements via
+  `SEC_SCAN_DAST_RATE_LIMIT` and `SEC_SCAN_DAST_TIMEOUT_MS`.
+- The scope allow-list supports exact hosts, `*.wildcard` hostnames, and IPv4
+  CIDR ranges; any target outside it is rejected before a request is sent.
+
 ## Agent-harness safety
 
 The LLM harness (Claude Code / Codex) receives findings as **data, not

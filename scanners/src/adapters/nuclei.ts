@@ -5,6 +5,7 @@ import type { Scanner } from "../../../core/src/engine.js";
 import { fingerprint } from "../../../core/src/engine.js";
 import type { Finding, ScanResult, Severity } from "../../../core/src/types.js";
 import { detect, run } from "../exec.js";
+import { activeLimits } from "../limits.js";
 
 function mapSeverity(s: string): Severity {
   switch ((s || "").toLowerCase()) {
@@ -38,7 +39,13 @@ export const nuclei: Scanner = {
       };
     }
     // -jsonl: one JSON object per line. Non-intrusive template set only.
-    const res = await run("nuclei", ["-target", target, "-jsonl", "-silent", "-severity", "low,medium,high,critical"]);
+    // Rate-limited and time-boxed for authorized, scoped engagements.
+    const { rateLimit, timeoutMs } = activeLimits();
+    const res = await run(
+      "nuclei",
+      ["-target", target, "-jsonl", "-silent", "-rate-limit", String(rateLimit), "-severity", "low,medium,high,critical"],
+      { timeoutMs },
+    );
     const findings: Finding[] = [];
     for (const line of res.stdout.split("\n")) {
       if (!line.trim()) continue;
