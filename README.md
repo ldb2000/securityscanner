@@ -10,13 +10,26 @@ proposes human-reviewed fixes (remediate). Inspired by OpenAI's
 > test. Active (DAST) checks are refused unless an authorization scope is
 > supplied. See `SPEC.md` §5.
 
-## Install & build
+## Install
 
 ```bash
-npm install
-npm run build
+# From npm (no local toolchain needed)
+npx @ldb2000/sec-scan scan . --only sast,sca,secrets
+
+# Container image with all scanners preinstalled & pinned
+docker run --rm -v "$PWD:/src" ghcr.io/ldb2000/securityscanner scan /src
+
+# From source
+npm install && npm run build
 node dist/cli/src/index.js --help
+
+# Self-contained single-file CLI
+npm run bundle && ./dist/sec-scan.cjs --help
 ```
+
+Install the external scanners (or use the container) with
+`scripts/install-tools.sh`; versions are pinned and verified
+(`scripts/verify-tools.sh`). See `CHANGELOG.md` for releases.
 
 ## Usage
 
