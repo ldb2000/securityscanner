@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "rootDir": ".",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declaration": false,
+    "sourceMap": false,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "cli/src/**/*.ts",
+    "core/src/**/*.ts",
+    "scanners/src/**/*.ts",
+    "agent/src/**/*.ts",
+    "report/src/**/*.ts"
+  ]
+}

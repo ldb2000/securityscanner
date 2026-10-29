@@ -1,0 +1,27 @@
+{
+  "name": "sec-scan",
+  "version": "0.1.0",
+  "description": "Defensive security-audit CLI that runs as an agent harness under Claude Code or Codex. Identify -> validate -> remediate.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "sec-scan": "dist/cli/src/index.js"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "node --loader ts-node/esm cli/src/index.ts",
+    "start": "node dist/cli/src/index.js",
+    "typecheck": "tsc -b --noEmit false --dry 2>/dev/null; tsc -p tsconfig.json --noEmit",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "commander": "12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "20.14.9",
+    "typescript": "5.5.4"
+  }
+}
