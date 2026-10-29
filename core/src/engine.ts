@@ -11,6 +11,7 @@ import type {
 } from "./types.js";
 import { SEVERITY_ORDER, ACTIVE_CATEGORIES } from "./types.js";
 import { assertInScope } from "./scope.js";
+import { audit } from "./audit.js";
 
 export interface Scanner {
   readonly tool: string;
@@ -68,6 +69,14 @@ export async function identify(opts: IdentifyOptions): Promise<ScanResult[]> {
         });
         continue;
       }
+      // Scope passed: record the active scan before any network interaction.
+      audit({
+        action: "active-scan",
+        target: opts.target,
+        detail: `${scanner.tool}/${scanner.category}`,
+        authorizedBy: opts.scope.authorizedBy,
+        scopeRef: opts.scope.authorizedAt,
+      });
     }
     results.push(await scanner.scan(opts.target));
   }
@@ -107,4 +116,20 @@ export function newManifest(target: string, categories: ScanCategory[], harness:
     harness: harness.name,
     toolVersions: {},
   };
+}
+
+/** Collect real version strings for the scanners in the selected categories. */
+export async function collectToolVersions(
+  scanners: Scanner[],
+  categories: ScanCategory[],
+): Promise<Record<string, string>> {
+  const picked = scanners.filter((s) => categories.includes(s.category));
+  const out: Record<string, string> = {};
+  await Promise.all(
+    picked.map(async (s) => {
+      const v = await s.version();
+      out[s.tool] = v ?? "absent";
+    }),
+  );
+  return out;
 }

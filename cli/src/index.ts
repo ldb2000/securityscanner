@@ -5,8 +5,17 @@ import { Command } from "commander";
 import { readFileSync, writeFileSync } from "node:fs";
 import type { ScanCategory, Severity } from "../../core/src/types.js";
 import { SEVERITY_ORDER } from "../../core/src/types.js";
-import { identify, mergeFindings, newManifest, severityRank, topSeverity } from "../../core/src/engine.js";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { writeFileSync as writeFileSyncTmp, rmSync } from "node:fs";
+import { collectToolVersions, identify, mergeFindings, newManifest, severityRank, topSeverity } from "../../core/src/engine.js";
 import { loadScope, ScopeError } from "../../core/src/scope.js";
+import { audit } from "../../core/src/audit.js";
+import type { Finding } from "../../core/src/types.js";
+
+const pExecFile = promisify(execFile);
 import { ALL_SCANNERS } from "../../scanners/src/index.js";
 import { selectHarness } from "../../agent/src/index.js";
 import { toJson, toMarkdown, toSarif } from "../../report/src/index.js";
@@ -60,6 +69,7 @@ program
     const results = await identify({ target: path, categories, scanners: ALL_SCANNERS, scope });
     for (const r of results) if (r.skipped) console.error(`skip ${r.tool}/${r.category}: ${r.reason}`);
     const findings = mergeFindings(results);
+    manifest.toolVersions = await collectToolVersions(ALL_SCANNERS, categories);
     manifest.finishedAt = new Date().toISOString();
     const output = render(findings, manifest, opts.format);
     if (opts.out) {
@@ -97,6 +107,7 @@ program
     let findings = mergeFindings(results);
     findings = await harness.validate(findings);
     findings = await harness.remediate(findings);
+    manifest.toolVersions = await collectToolVersions(ALL_SCANNERS, categories);
     manifest.finishedAt = new Date().toISOString();
     process.stdout.write(render(findings, manifest, opts.format) + "\n");
   });
@@ -148,6 +159,54 @@ program
       process.exit(1);
     }
     console.error(`PASS: nothing at or above ${threshold}`);
+  });
+
+program
+  .command("fix")
+  .description("show proposed remediation diffs; apply only with explicit confirmation")
+  .argument("<findings.json>", "a findings JSON file produced by scan/audit")
+  .option("--apply", "apply the diffs to the working tree (requires --yes)")
+  .option("--yes", "non-interactive confirmation for --apply")
+  .action(async (file: string, opts) => {
+    const data = JSON.parse(readFileSync(file, "utf8")) as { manifest?: { target?: string }; findings: Finding[] };
+    const withDiff = (data.findings ?? []).filter((f) => f.remediation?.diff && !f.falsePositive);
+    if (withDiff.length === 0) {
+      console.error("No remediation diffs to apply. Run `sec-scan audit --harness <h>` first.");
+      return;
+    }
+    for (const f of withDiff) {
+      console.log(`\n# ${f.severity.toUpperCase()} ${f.ruleId} (${f.tool}) — ${f.title}`);
+      console.log(f.remediation!.summary);
+      console.log(f.remediation!.diff);
+    }
+    if (!opts.apply) {
+      console.error(`\n${withDiff.length} diff(s) shown. Re-run with --apply --yes to apply them.`);
+      return;
+    }
+    if (!opts.yes) {
+      console.error("Refusing to apply without explicit confirmation. Pass --yes.");
+      process.exit(2);
+    }
+    let applied = 0;
+    for (const f of withDiff) {
+      const patch = join(tmpdir(), `sec-scan-fix-${f.id}.patch`);
+      writeFileSyncTmp(patch, f.remediation!.diff!.endsWith("\n") ? f.remediation!.diff! : f.remediation!.diff! + "\n");
+      try {
+        await pExecFile("git", ["apply", "--whitespace=nowarn", patch]);
+        applied++;
+        audit({ action: "fix-apply", target: data.manifest?.target ?? ".", detail: `${f.tool}:${f.ruleId}` });
+        console.error(`applied: ${f.ruleId}`);
+      } catch (e) {
+        console.error(`FAILED to apply ${f.ruleId}: ${(e as Error).message.split("\n")[0]}`);
+      } finally {
+        try {
+          rmSync(patch, { force: true });
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    console.error(`\n${applied}/${withDiff.length} diff(s) applied. Review with 'git diff' before committing.`);
   });
 
 program

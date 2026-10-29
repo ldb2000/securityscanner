@@ -11,8 +11,9 @@
     "build": "tsc -b",
     "dev": "node --loader ts-node/esm cli/src/index.ts",
     "start": "node dist/cli/src/index.js",
-    "typecheck": "tsc -b --noEmit false --dry 2>/dev/null; tsc -p tsconfig.json --noEmit",
-    "test": "node --test"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pretest": "npm run build",
+    "test": "SEC_SCAN_AUDIT_LOG=/tmp/sec-scan-test-audit.log node --test tests/"
   },
   "engines": {
     "node": ">=20"

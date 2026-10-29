@@ -23,7 +23,9 @@ node dist/cli/src/index.js --help
 ```bash
 sec-scan scan .                      # static scan (sast, sca, secrets, iac, container, sbom)
 sec-scan scan . --format md          # markdown report
-sec-scan audit . --harness claude-code
+sec-scan audit . --harness claude-code --format json > findings.json
+sec-scan fix findings.json           # show proposed diffs (nothing applied)
+sec-scan fix findings.json --apply --yes   # apply after explicit confirmation (audit-logged)
 sec-scan ci . --fail-on high         # CI gate
 sec-scan scope scope.json            # validate an authorization scope
 sec-scan scan https://staging.example.com --only dast --scope scope.json

@@ -2,3 +2,5 @@ node_modules/
 dist/
 *.sarif
 findings.json
+.sec-scan-audit.log
+*.cdx.json

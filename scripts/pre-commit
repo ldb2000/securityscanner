@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# sec-scan pre-commit hook: fast secrets + SAST gate on staged changes.
+# Install:  ln -sf ../../scripts/pre-commit .git/hooks/pre-commit
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+CLI="$ROOT/dist/cli/src/index.js"
+
+if [ ! -f "$CLI" ]; then
+  echo "sec-scan: build missing (run 'npm run build'); skipping hook." >&2
+  exit 0
+fi
+
+echo "sec-scan: scanning for secrets and high-severity SAST issues..."
+if ! node "$CLI" ci . --only secrets,sast --fail-on high; then
+  echo "sec-scan: commit blocked — resolve the findings above or bypass with --no-verify." >&2
+  exit 1
+fi
