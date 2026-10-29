@@ -27,6 +27,11 @@ sec-scan audit . --harness claude-code --format json > findings.json
 sec-scan fix findings.json           # show proposed diffs (nothing applied)
 sec-scan fix findings.json --apply --yes   # apply after explicit confirmation (audit-logged)
 sec-scan ci . --fail-on high         # CI gate
+
+# Baseline: accept known findings so they stop showing up
+sec-scan scan . --format json > findings.json
+sec-scan baseline findings.json --out baseline.json   # generate suppressions
+sec-scan scan . --baseline baseline.json              # suppressed on later runs
 sec-scan scope scope.json            # validate an authorization scope
 sec-scan scan https://staging.example.com --only dast --scope scope.json
 ```
@@ -44,6 +49,21 @@ sec-scan scan https://staging.example.com --only dast --scope scope.json
 
 DAST adapters refuse to run without this file, and reject any target not in
 `targets`.
+
+### Baseline (`baseline.json`)
+
+```json
+{
+  "suppressions": [
+    { "fingerprint": "ab12cd34ef56…", "reason": "accepted risk", "expires": "2026-12-31" }
+  ]
+}
+```
+
+A finding is hidden while a suppression matches its fingerprint and has not
+expired. Remove `expires` to suppress indefinitely; an expired suppression lets
+the finding reappear. Findings are normalized through a single SARIF-2.1.0
+ingestion path (`core/sarif-ingest.ts`), so fingerprints are stable across runs.
 
 ## Layout
 
