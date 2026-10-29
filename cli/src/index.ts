@@ -12,10 +12,26 @@ import { join } from "node:path";
 import { writeFileSync as writeFileSyncTmp, rmSync } from "node:fs";
 import { collectToolVersions, identify, mergeFindings, newManifest, severityRank, topSeverity } from "../../core/src/engine.js";
 import { loadScope, ScopeError } from "../../core/src/scope.js";
+import { applyBaseline, baselineFromFindings, loadBaseline, BaselineError } from "../../core/src/baseline.js";
 import { audit } from "../../core/src/audit.js";
 import type { Finding } from "../../core/src/types.js";
 
 const pExecFile = promisify(execFile);
+
+/** Apply a baseline file to findings, logging how many were suppressed. */
+function filterBaseline(findings: Finding[], baselinePath: string | undefined): Finding[] {
+  if (!baselinePath) return findings;
+  let baseline;
+  try {
+    baseline = loadBaseline(baselinePath);
+  } catch (e) {
+    console.error((e as BaselineError).message);
+    process.exit(2);
+  }
+  const { kept, suppressed } = applyBaseline(findings, baseline);
+  if (suppressed.length > 0) console.error(`baseline: suppressed ${suppressed.length} known finding(s)`);
+  return kept;
+}
 import { ALL_SCANNERS } from "../../scanners/src/index.js";
 import { selectHarness } from "../../agent/src/index.js";
 import { toJson, toMarkdown, toSarif } from "../../report/src/index.js";
@@ -51,6 +67,7 @@ program
   .option("--format <fmt>", "sarif|json|md", "sarif")
   .option("--scope <file>", "authorization scope file (required for dast)")
   .option("--out <file>", "write report to file instead of stdout")
+  .option("--baseline <file>", "suppress findings listed in this baseline file")
   .option("--harness <name>", "claude-code|codex|none", "none")
   .action(async (path: string, opts) => {
     const categories = parseCategories(opts.only);
@@ -68,7 +85,7 @@ program
     }
     const results = await identify({ target: path, categories, scanners: ALL_SCANNERS, scope });
     for (const r of results) if (r.skipped) console.error(`skip ${r.tool}/${r.category}: ${r.reason}`);
-    const findings = mergeFindings(results);
+    const findings = filterBaseline(mergeFindings(results), opts.baseline);
     manifest.toolVersions = await collectToolVersions(ALL_SCANNERS, categories);
     manifest.finishedAt = new Date().toISOString();
     const output = render(findings, manifest, opts.format);
@@ -87,6 +104,7 @@ program
   .option("--only <categories>")
   .option("--scope <file>")
   .option("--harness <name>", "claude-code|codex|none", "none")
+  .option("--baseline <file>", "suppress findings listed in this baseline file")
   .option("--format <fmt>", "sarif|json|md", "md")
   .action(async (path: string, opts) => {
     const categories = parseCategories(opts.only);
@@ -104,7 +122,7 @@ program
     }
     const results = await identify({ target: path, categories, scanners: ALL_SCANNERS, scope });
     for (const r of results) if (r.skipped) console.error(`skip ${r.tool}/${r.category}: ${r.reason}`);
-    let findings = mergeFindings(results);
+    let findings = filterBaseline(mergeFindings(results), opts.baseline);
     findings = await harness.validate(findings);
     findings = await harness.remediate(findings);
     manifest.toolVersions = await collectToolVersions(ALL_SCANNERS, categories);
@@ -144,12 +162,13 @@ program
   .description("non-interactive scan; exit non-zero over threshold")
   .argument("<path>")
   .option("--only <categories>")
+  .option("--baseline <file>", "suppress findings listed in this baseline file")
   .option("--fail-on <severity>", "critical|high|medium|low", "high")
   .action(async (path: string, opts) => {
     const categories = parseCategories(opts.only);
     const harness = selectHarness("none");
     const results = await identify({ target: path, categories, scanners: ALL_SCANNERS });
-    const findings = mergeFindings(results);
+    const findings = filterBaseline(mergeFindings(results), opts.baseline);
     const top = topSeverity(findings);
     const threshold = opts.failOn as Severity;
     const manifest = newManifest(path, categories, harness);
@@ -207,6 +226,24 @@ program
       }
     }
     console.error(`\n${applied}/${withDiff.length} diff(s) applied. Review with 'git diff' before committing.`);
+  });
+
+program
+  .command("baseline")
+  .description("generate a baseline file that suppresses all findings in a findings JSON")
+  .argument("<findings.json>", "a findings JSON file produced by scan/audit")
+  .option("--reason <text>", "reason recorded on each suppression", "baselined")
+  .option("--out <file>", "write baseline here instead of stdout")
+  .action((file: string, opts) => {
+    const data = JSON.parse(readFileSync(file, "utf8")) as { findings: Finding[] };
+    const baseline = baselineFromFindings(data.findings ?? [], opts.reason);
+    const text = JSON.stringify(baseline, null, 2);
+    if (opts.out) {
+      writeFileSync(opts.out, text);
+      console.error(`wrote baseline with ${baseline.suppressions.length} suppression(s) to ${opts.out}`);
+    } else {
+      process.stdout.write(text + "\n");
+    }
   });
 
 program
