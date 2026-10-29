@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "todos",
+    "size"
+  ],
+  "properties": {
+    "todos": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "why": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "from": {
+            "type": "integer",
+            "description": "split only: id of the original todo this one continues"
+          }
+        }
+      }
+    },
+    "size": {
+      "enum": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ]
+    },
+    "complexity": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10
+    },
+    "questions": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      }
+    },
+    "criteria": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "string",
+        "maxLength": 300
+      }
+    }
+  }
+}

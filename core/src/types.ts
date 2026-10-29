@@ -59,6 +59,12 @@ export interface ScanResult {
   skipped?: boolean;
   reason?: string; // why skipped (e.g. binary absent, not authorized)
   findings: Finding[];
+  durationMs?: number; // wall-clock time this scanner took
+}
+
+export interface Delta {
+  added: string[]; // fingerprints present now but not in the baseline
+  resolved: string[]; // baseline fingerprints no longer found
 }
 
 export interface RunManifest {
@@ -68,7 +74,9 @@ export interface RunManifest {
   categories: ScanCategory[];
   harness: "claude-code" | "codex" | "none";
   toolVersions: Record<string, string>;
+  durations?: Record<string, number>; // per-scanner wall-clock ms
   scopeRef?: string;
+  delta?: Delta; // vs baseline, when a baseline was applied
 }
 
 export interface AuthorizationScope {

@@ -12,7 +12,8 @@ import { join } from "node:path";
 import { writeFileSync as writeFileSyncTmp, rmSync } from "node:fs";
 import { collectToolVersions, identify, mergeFindings, newManifest, severityRank, topSeverity } from "../../core/src/engine.js";
 import { loadScope, ScopeError } from "../../core/src/scope.js";
-import { applyBaseline, baselineFromFindings, loadBaseline, BaselineError } from "../../core/src/baseline.js";
+import { applyBaseline, activeSuppressions, baselineFromFindings, loadBaseline, BaselineError } from "../../core/src/baseline.js";
+import type { Delta, ScanResult } from "../../core/src/types.js";
 import { loadConfig, applyRuleFilters, profileFailOn, ConfigError, type SecScanConfig } from "../../core/src/config.js";
 import { audit } from "../../core/src/audit.js";
 import type { Finding } from "../../core/src/types.js";
@@ -39,6 +40,29 @@ function resolveCategories(only: string | undefined, config: SecScanConfig): Sca
 /** A target dir for config discovery (skip URLs / non-dirs). */
 function dirForConfig(target: string): string {
   return target.includes("://") ? "." : target;
+}
+
+/** Per-scanner wall-clock durations for the run manifest. */
+function durationsOf(results: ScanResult[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const r of results) if (typeof r.durationMs === "number") out[r.tool] = r.durationMs;
+  return out;
+}
+
+/** Delta vs baseline: new findings (not accepted) and resolved (accepted, now gone). */
+function computeDelta(merged: Finding[], baselinePath: string | undefined): Delta | undefined {
+  if (!baselinePath) return undefined;
+  let active: Set<string>;
+  try {
+    active = activeSuppressions(loadBaseline(baselinePath));
+  } catch {
+    return undefined;
+  }
+  const currentIds = new Set(merged.map((f) => f.id));
+  return {
+    added: [...currentIds].filter((id) => !active.has(id)),
+    resolved: [...active].filter((id) => !currentIds.has(id)),
+  };
 }
 
 /** Apply a baseline file to findings, logging how many were suppressed. */
@@ -110,7 +134,11 @@ program
     }
     const results = await identify({ target: path, categories, scanners: ALL_SCANNERS, scope });
     for (const r of results) if (r.skipped) console.error(`skip ${r.tool}/${r.category}: ${r.reason}`);
-    const findings = applyRuleFilters(filterBaseline(mergeFindings(results), opts.baseline ?? config.baseline), config.rules);
+    const merged = mergeFindings(results);
+    const baselinePath = opts.baseline ?? config.baseline;
+    const findings = applyRuleFilters(filterBaseline(merged, baselinePath), config.rules);
+    manifest.durations = durationsOf(results);
+    manifest.delta = computeDelta(merged, baselinePath);
     manifest.toolVersions = await collectToolVersions(ALL_SCANNERS, categories);
     manifest.finishedAt = new Date().toISOString();
     const output = render(findings, manifest, opts.format);
@@ -149,7 +177,11 @@ program
     }
     const results = await identify({ target: path, categories, scanners: ALL_SCANNERS, scope });
     for (const r of results) if (r.skipped) console.error(`skip ${r.tool}/${r.category}: ${r.reason}`);
-    let findings = applyRuleFilters(filterBaseline(mergeFindings(results), opts.baseline ?? config.baseline), config.rules);
+    const mergedA = mergeFindings(results);
+    const baselineA = opts.baseline ?? config.baseline;
+    let findings = applyRuleFilters(filterBaseline(mergedA, baselineA), config.rules);
+    manifest.durations = durationsOf(results);
+    manifest.delta = computeDelta(mergedA, baselineA);
     findings = await harness.validate(findings);
     findings = await harness.remediate(findings);
     manifest.toolVersions = await collectToolVersions(ALL_SCANNERS, categories);
@@ -197,10 +229,14 @@ program
     const categories = resolveCategories(opts.only, config);
     const harness = selectHarness("none");
     const results = await identify({ target: path, categories, scanners: ALL_SCANNERS });
-    const findings = applyRuleFilters(filterBaseline(mergeFindings(results), opts.baseline ?? config.baseline), config.rules);
+    const mergedC = mergeFindings(results);
+    const baselineC = opts.baseline ?? config.baseline;
+    const findings = applyRuleFilters(filterBaseline(mergedC, baselineC), config.rules);
     const top = topSeverity(findings);
     const threshold = (opts.failOn ?? config.failOn ?? (config.profile ? profileFailOn(config.profile) : "high")) as Severity;
     const manifest = newManifest(path, categories, harness);
+    manifest.durations = durationsOf(results);
+    manifest.delta = computeDelta(mergedC, baselineC);
     console.error(toMarkdown(findings, manifest));
     if (top && severityRank(top) <= severityRank(threshold)) {
       console.error(`FAIL: highest severity ${top} >= threshold ${threshold}`);
