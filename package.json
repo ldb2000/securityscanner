@@ -15,7 +15,8 @@
     "SECURITY.md",
     "LICENSE",
     "CHANGELOG.md",
-    ".sec-scan.example.json"
+    ".sec-scan.example.json",
+    "docs"
   ],
   "repository": {
     "type": "git",
@@ -25,7 +26,16 @@
   "bugs": {
     "url": "https://github.com/ldb2000/securityscanner/issues"
   },
-  "keywords": ["security", "sast", "sca", "sbom", "dast", "sarif", "cli", "devsecops"],
+  "keywords": [
+    "security",
+    "sast",
+    "sca",
+    "sbom",
+    "dast",
+    "sarif",
+    "cli",
+    "devsecops"
+  ],
   "publishConfig": {
     "access": "public"
   },
