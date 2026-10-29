@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+if [ "$1" = "version" ]; then echo "8.18.0-mock"; exit 0; fi
+out=""
+while [ $# -gt 0 ]; do case "$1" in --report-path) out="$2"; shift 2;; *) shift;; esac; done
+[ -n "$out" ] && cat > "$out" <<'JSON'
+[{"RuleID":"aws-access-key","Description":"AWS Access Key","File":"config.js","StartLine":2,"EndLine":2}]
+JSON
+exit 0

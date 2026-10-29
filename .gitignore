@@ -1,5 +1,6 @@
 node_modules/
 dist/
+coverage/
 *.sarif
 findings.json
 .sec-scan-audit.log

@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+if [ "$1" = "--version" ]; then echo "1.90.0-mock"; exit 0; fi
+# Emit SARIF 2.1.0 (format consumed by the post-SS-3 semgrep adapter).
+cat <<'JSON'
+{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"semgrep","rules":[{"id":"javascript.lang.security.detect-eval","helpUri":"https://owasp.org/eval"}]}},"results":[{"ruleId":"javascript.lang.security.detect-eval","level":"error","message":{"text":"Use of eval detected."},"locations":[{"physicalLocation":{"artifactLocation":{"uri":"app.js"},"region":{"startLine":3,"endLine":3}}}]}]}]}
+JSON
