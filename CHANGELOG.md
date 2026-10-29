@@ -7,6 +7,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Full `docs/` guide (installation, commands, config, env vars, harness,
+  baseline, DAST/authorization, CI, outputs, guidelines); README links to it.
 - Packaging & distribution: scoped npm package `@ldb2000/sec-scan` with `bin`,
   `files`, and `publishConfig`; `npm run bundle` produces a self-contained CLI.
 - Container image with pinned, checksum-verified scanners.
@@ -17,6 +19,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.1.0] - 2026-10-29
 
 ### Added
+- Full `docs/` guide (installation, commands, config, env vars, harness,
+  baseline, DAST/authorization, CI, outputs, guidelines); README links to it.
 - Core engine (identify → validate → remediate) with SARIF 2.1.0 model.
 - Scanner adapters: semgrep, trivy, grype, gitleaks, trufflehog, checkov, syft,
   nuclei, zap (DAST adapters gated by an authorization scope).

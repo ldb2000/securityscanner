@@ -10,6 +10,8 @@ proposes human-reviewed fixes (remediate). Inspired by OpenAI's
 > test. Active (DAST) checks are refused unless an authorization scope is
 > supplied. See `SPEC.md` §5.
 
+> 📚 **[Documentation complète](docs/README.md)** — guide d’usage, référence des commandes, configuration, CI, DAST, sorties.
+
 ## Install
 
 ```bash
