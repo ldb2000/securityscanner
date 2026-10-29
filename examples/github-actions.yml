@@ -1,0 +1,17 @@
+# Example: use the sec-scan composite action in a consumer repo.
+name: security
+on: [pull_request]
+jobs:
+  sec-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write   # required for SARIF upload to code scanning
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ldb2000/securityscanner@v1
+        with:
+          path: .
+          categories: sast,sca,secrets,iac,sbom
+          fail-on: high
+          upload-sarif: "true"

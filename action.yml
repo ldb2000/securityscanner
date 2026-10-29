@@ -1,0 +1,57 @@
+name: "sec-scan"
+description: "Defensive security audit (SAST/SCA/secrets/IaC/SBOM) with a severity gate and SARIF upload."
+author: "ldb2000"
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  path:
+    description: "Target path to scan."
+    required: false
+    default: "."
+  categories:
+    description: "Comma list of categories (sast,sca,secrets,iac,container,sbom)."
+    required: false
+    default: "sast,sca,secrets,iac,sbom"
+  fail-on:
+    description: "Severity threshold that fails the job (critical|high|medium|low)."
+    required: false
+    default: "high"
+  upload-sarif:
+    description: "Upload SARIF to code scanning (true/false)."
+    required: false
+    default: "true"
+  install-tools:
+    description: "Scanners to install before running (space list), or 'none'."
+    required: false
+    default: "semgrep trivy gitleaks"
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+    - name: Install sec-scan
+      shell: bash
+      run: npm i -g @ldb2000/sec-scan
+    - name: Install scanners
+      if: inputs.install-tools != 'none'
+      shell: bash
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/ldb2000/securityscanner/master/scripts/install-tools.sh -o /tmp/install-tools.sh
+        bash /tmp/install-tools.sh ${{ inputs.install-tools }} || true
+    - name: Scan (SARIF)
+      if: inputs.upload-sarif == 'true'
+      shell: bash
+      run: sec-scan scan "${{ inputs.path }}" --only "${{ inputs.categories }}" --format sarif --out sec-scan.sarif || true
+    - name: Upload SARIF to code scanning
+      if: inputs.upload-sarif == 'true'
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: sec-scan.sarif
+      continue-on-error: true
+    - name: Severity gate
+      shell: bash
+      run: sec-scan ci "${{ inputs.path }}" --only "${{ inputs.categories }}" --fail-on "${{ inputs.fail-on }}"

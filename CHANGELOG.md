@@ -12,6 +12,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Container image with pinned, checksum-verified scanners.
 - `scripts/verify-tools.sh` to assert pinned scanner versions.
 - Release workflow publishing to npm on a version tag.
+- Composite GitHub Action, GitLab example, and documented CI exit codes.
 
 ## [0.1.0] - 2026-10-29
 

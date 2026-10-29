@@ -98,6 +98,21 @@ runs reproducible with no flags. See `.sec-scan.example.json`.
 - **Precedence**: CLI flag > config file > built-in default. An invalid config
   is rejected with a clear message (exit code 2).
 
+### CI/CD integration
+
+Use the composite action (see `examples/github-actions.yml`):
+
+```yaml
+- uses: ldb2000/securityscanner@v1
+  with: { path: ., fail-on: high, upload-sarif: "true" }
+```
+
+It installs scanners, uploads SARIF to code scanning, and fails the job above
+the threshold. A GitLab example is in `examples/gitlab-ci.yml`. Exit codes:
+`0` clean, `1` at/above the threshold, `2` usage error. Install the local
+pre-commit secret+SAST gate with
+`ln -sf ../../scripts/pre-commit .git/hooks/pre-commit`.
+
 ## Layout
 
 | Folder | Role |
