@@ -13,10 +13,33 @@ import { writeFileSync as writeFileSyncTmp, rmSync } from "node:fs";
 import { collectToolVersions, identify, mergeFindings, newManifest, severityRank, topSeverity } from "../../core/src/engine.js";
 import { loadScope, ScopeError } from "../../core/src/scope.js";
 import { applyBaseline, baselineFromFindings, loadBaseline, BaselineError } from "../../core/src/baseline.js";
+import { loadConfig, applyRuleFilters, profileFailOn, ConfigError, type SecScanConfig } from "../../core/src/config.js";
 import { audit } from "../../core/src/audit.js";
 import type { Finding } from "../../core/src/types.js";
 
 const pExecFile = promisify(execFile);
+
+/** Load the config file, exiting with a clear message when it is invalid. */
+function loadConfigSafe(explicit: string | undefined, targetDir: string): SecScanConfig {
+  try {
+    return loadConfig(explicit, targetDir);
+  } catch (e) {
+    console.error((e as ConfigError).message);
+    process.exit(2);
+  }
+}
+
+/** Categories: CLI --only > config.categories > default (all static). */
+function resolveCategories(only: string | undefined, config: SecScanConfig): ScanCategory[] {
+  if (only) return parseCategories(only);
+  if (config.categories && config.categories.length) return config.categories;
+  return parseCategories(undefined);
+}
+
+/** A target dir for config discovery (skip URLs / non-dirs). */
+function dirForConfig(target: string): string {
+  return target.includes("://") ? "." : target;
+}
 
 /** Apply a baseline file to findings, logging how many were suppressed. */
 function filterBaseline(findings: Finding[], baselinePath: string | undefined): Finding[] {
@@ -68,10 +91,12 @@ program
   .option("--scope <file>", "authorization scope file (required for dast)")
   .option("--out <file>", "write report to file instead of stdout")
   .option("--baseline <file>", "suppress findings listed in this baseline file")
-  .option("--harness <name>", "claude-code|codex|none", "none")
+  .option("--harness <name>", "claude-code|codex|none")
+  .option("--config <file>", "load .sec-scan.json (auto-discovered if omitted)")
   .action(async (path: string, opts) => {
-    const categories = parseCategories(opts.only);
-    const harness = selectHarness(opts.harness);
+    const config = loadConfigSafe(opts.config, dirForConfig(path));
+    const categories = resolveCategories(opts.only, config);
+    const harness = selectHarness(opts.harness ?? config.harness);
     const manifest = newManifest(path, categories, harness);
     let scope;
     if (opts.scope) {
@@ -85,7 +110,7 @@ program
     }
     const results = await identify({ target: path, categories, scanners: ALL_SCANNERS, scope });
     for (const r of results) if (r.skipped) console.error(`skip ${r.tool}/${r.category}: ${r.reason}`);
-    const findings = filterBaseline(mergeFindings(results), opts.baseline);
+    const findings = applyRuleFilters(filterBaseline(mergeFindings(results), opts.baseline ?? config.baseline), config.rules);
     manifest.toolVersions = await collectToolVersions(ALL_SCANNERS, categories);
     manifest.finishedAt = new Date().toISOString();
     const output = render(findings, manifest, opts.format);
@@ -103,12 +128,14 @@ program
   .argument("<path>")
   .option("--only <categories>")
   .option("--scope <file>")
-  .option("--harness <name>", "claude-code|codex|none", "none")
+  .option("--harness <name>", "claude-code|codex|none")
   .option("--baseline <file>", "suppress findings listed in this baseline file")
+  .option("--config <file>", "load .sec-scan.json (auto-discovered if omitted)")
   .option("--format <fmt>", "sarif|json|md", "md")
   .action(async (path: string, opts) => {
-    const categories = parseCategories(opts.only);
-    const harness = selectHarness(opts.harness);
+    const config = loadConfigSafe(opts.config, dirForConfig(path));
+    const categories = resolveCategories(opts.only, config);
+    const harness = selectHarness(opts.harness ?? config.harness);
     const manifest = newManifest(path, categories, harness);
     let scope;
     if (opts.scope) {
@@ -122,7 +149,7 @@ program
     }
     const results = await identify({ target: path, categories, scanners: ALL_SCANNERS, scope });
     for (const r of results) if (r.skipped) console.error(`skip ${r.tool}/${r.category}: ${r.reason}`);
-    let findings = filterBaseline(mergeFindings(results), opts.baseline);
+    let findings = applyRuleFilters(filterBaseline(mergeFindings(results), opts.baseline ?? config.baseline), config.rules);
     findings = await harness.validate(findings);
     findings = await harness.remediate(findings);
     manifest.toolVersions = await collectToolVersions(ALL_SCANNERS, categories);
@@ -163,14 +190,16 @@ program
   .argument("<path>")
   .option("--only <categories>")
   .option("--baseline <file>", "suppress findings listed in this baseline file")
-  .option("--fail-on <severity>", "critical|high|medium|low", "high")
+  .option("--config <file>", "load .sec-scan.json (auto-discovered if omitted)")
+  .option("--fail-on <severity>", "critical|high|medium|low")
   .action(async (path: string, opts) => {
-    const categories = parseCategories(opts.only);
+    const config = loadConfigSafe(opts.config, dirForConfig(path));
+    const categories = resolveCategories(opts.only, config);
     const harness = selectHarness("none");
     const results = await identify({ target: path, categories, scanners: ALL_SCANNERS });
-    const findings = filterBaseline(mergeFindings(results), opts.baseline);
+    const findings = applyRuleFilters(filterBaseline(mergeFindings(results), opts.baseline ?? config.baseline), config.rules);
     const top = topSeverity(findings);
-    const threshold = opts.failOn as Severity;
+    const threshold = (opts.failOn ?? config.failOn ?? (config.profile ? profileFailOn(config.profile) : "high")) as Severity;
     const manifest = newManifest(path, categories, harness);
     console.error(toMarkdown(findings, manifest));
     if (top && severityRank(top) <= severityRank(threshold)) {

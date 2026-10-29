@@ -65,6 +65,26 @@ expired. Remove `expires` to suppress indefinitely; an expired suppression lets
 the finding reappear. Findings are normalized through a single SARIF-2.1.0
 ingestion path (`core/sarif-ingest.ts`), so fingerprints are stable across runs.
 
+### Configuration (`.sec-scan.json`)
+
+Drop a `.sec-scan.json` at the repo root (or pass `--config <file>`) to make
+runs reproducible with no flags. See `.sec-scan.example.json`.
+
+```json
+{
+  "categories": ["sast", "sca", "secrets", "iac", "sbom"],
+  "profile": "standard",
+  "harness": "none",
+  "baseline": "baseline.json",
+  "rules": { "semgrep": { "disable": ["some.rule.id"] } }
+}
+```
+
+- **profile** → `ci` threshold: `strict`=medium, `standard`=high, `permissive`=critical.
+- **rules**: per-tool `disable` (drop rule IDs) and `enable` (keep only those).
+- **Precedence**: CLI flag > config file > built-in default. An invalid config
+  is rejected with a clear message (exit code 2).
+
 ## Layout
 
 | Folder | Role |

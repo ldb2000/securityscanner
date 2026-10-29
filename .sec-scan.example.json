@@ -1,0 +1,10 @@
+{
+  "categories": ["sast", "sca", "secrets", "iac", "sbom"],
+  "profile": "standard",
+  "harness": "none",
+  "baseline": "baseline.json",
+  "rules": {
+    "semgrep": { "disable": ["generic.secrets.security.detected-generic-api-key"] },
+    "trivy": { "enable": [] }
+  }
+}
