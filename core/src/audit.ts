@@ -8,8 +8,9 @@ export interface AuditEntry {
   action: "active-scan" | "fix-apply";
   target: string;
   detail: string;
-  authorizedBy?: string;
-  scopeRef?: string;
+  authorizedBy?: string; // who
+  authorizedAt?: string; // when the authorization was granted
+  targets?: string[]; // authorized perimeter (allow-list)
 }
 
 const DEFAULT_LOG = process.env.SEC_SCAN_AUDIT_LOG ?? ".sec-scan-audit.log";
